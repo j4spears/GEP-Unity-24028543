@@ -15,6 +15,10 @@ public class GameplayState : GameState
         {
             GameManager.ChangeState(GameManager.PauseState);
         }
+        else if(Input.GetKeyDown(KeyCode.E))
+        {
+            GameManager.ChangeState(GameManager.InventoryState);
+        }
     }
 
     public override void PhysicsUpdate()

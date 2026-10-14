@@ -1,6 +1,5 @@
 using UnityEngine;
 
-public enum GameStates {GAMEPLAY, PAUSE}
 
 public class GameManager : MonoBehaviour
 {
@@ -11,16 +10,23 @@ public class GameManager : MonoBehaviour
     public GameplayState GameplayState;
     public PauseState PauseState;
 
-    #endregion
+    public InventoryState InventoryState;
 
+    #endregion
 
     private void Awake()
     {
         GameplayState = new GameplayState(this);
         PauseState = new PauseState(this);
+        InventoryState = new InventoryState(this);
 
         CurrentGameState = GameplayState;
         CurrentGameState.EnterState();
+    }
+
+    public GameState GetCurrentGameState()
+    {
+        return CurrentGameState;
     }
 
     public void ChangeState(GameState new_state)
@@ -39,4 +45,5 @@ public class GameManager : MonoBehaviour
     {
         CurrentGameState.PhysicsUpdate();
     }
+
 }
