@@ -19,7 +19,7 @@ public class Inventory : MonoBehaviour
 
     public bool AttemptAutoAddItemToGrid(ItemData itemData)
     {
-        InventoryItem item = gameObject.AddComponent<InventoryItem>();
+        InventoryItem item = new InventoryItem();
         item.SetItemData(itemData);
 
         if (itemData.maxStackSize > 1)
@@ -51,7 +51,7 @@ public class Inventory : MonoBehaviour
             }
         }
 
-        Destroy(item);
+    
         return false;
     }
 
@@ -118,7 +118,7 @@ public class Inventory : MonoBehaviour
             InventoryItem eligibleStack;
             eligibleStack = FindEligibleStack(item);
 
-            if(eligibleStack)
+            if(eligibleStack != null)
             {
                 IncrementStack(eligibleStack);
                 AddToInventoryList(item);
@@ -155,7 +155,7 @@ public class Inventory : MonoBehaviour
 
                 InventoryItem currentCell = inventoryGrid[x,y];
 
-                if(currentCell)
+                if(currentCell != null)
                 {
                     if(currentCell.GetItemData().itemName == itemData.itemName && currentCell.GetCurrentStackSize() < currentCell.GetItemData().maxStackSize)
                     {

@@ -4,22 +4,31 @@ public class WorldItem : MonoBehaviour
 {
     [SerializeField] private ItemData itemData;
 
-    public GameManager gameManager;
+    private GameManager gameManager;
+
+    private bool playerInRange = false;
 
     void Start()
     {
         gameManager = FindAnyObjectByType<GameManager>();
     }
 
-    private void OnTriggerStay(Collider other)
+    private void Update()
     {
-        if(other.CompareTag("Player"))
+        if (playerInRange && Input.GetKeyDown(KeyCode.F) && gameManager.CurrentGameState == gameManager.GameplayState)
         {
-            if (Input.GetKeyDown(KeyCode.F) && gameManager.CurrentGameState == gameManager.GameplayState)
-            {
-                Pickup();
-            }
+            Pickup();
         }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        playerInRange = true;
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        playerInRange = false;
     }
 
     private void Pickup()

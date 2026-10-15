@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class InventoryItem : MonoBehaviour
+public class InventoryItem
 {
     private ItemData itemData;
 
