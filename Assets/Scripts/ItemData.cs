@@ -11,11 +11,11 @@ public class ItemData : ScriptableObject
 
     public Sprite uiIcon;
 
-    public bool[,] gridShape = new bool[3, 3]
+    public Grid<bool?> grid = new Grid<bool?>(3, 3)
     {
         { true, true, true },
-        { true, false, false },
-        { true, false, false }
+        { true, null, null },
+        { true, null, null }
     };
 
     public int maxStackSize;

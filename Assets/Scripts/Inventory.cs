@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class Inventory : MonoBehaviour
 {
     public List<InventoryItem> items = new List<InventoryItem>();
-    public InventoryItem[,] inventoryGrid = new InventoryItem[10, 10];
+    public Grid<InventoryItem> inventoryGrid = new Grid<InventoryItem>(10, 10);
     public GameManager gameManager;
 
     void Start()
@@ -12,13 +12,13 @@ public class Inventory : MonoBehaviour
         gameManager = FindAnyObjectByType<GameManager>();
     }
 
-    public void AddItemToInventory(InventoryItem item)
+    public void AddToInventoryList(InventoryItem item)
     {
         items.Add(item);
         debugPrintGrid(inventoryGrid);
     }
 
-    public void RemoveItemFromInventory(InventoryItem item)
+    public void RemoveFromInventoryList(InventoryItem item)
     {
         items.Remove(item);
     }
@@ -29,21 +29,9 @@ public class Inventory : MonoBehaviour
         InventoryItem item = gameObject.AddComponent<InventoryItem>();
         item.SetItemData(itemData);
 
-        if (itemData.maxStackSize > 0)
+        if (itemData.maxStackSize > 1)
         {
-            if(CheckForItemAlreadyInInventory(itemData))
-            {
-                InventoryItem eligibleStack;
-                eligibleStack = FindEligibleStack(itemData);
-
-                
-                if(eligibleStack)
-                {
-                    IncrementStack(eligibleStack);
-                    AddItemToInventory(item);
-                    return true;
-                }
-            }
+            if(AttemptAutoStack(item)) return true;
         }
 
         //loop through every cell in inventory grid
@@ -54,14 +42,16 @@ public class Inventory : MonoBehaviour
                 //loop through every rotation of the item
                 for(int n = 0; n < 4; n++)
                 {
+                    Grid<bool?> rotatedItemGrid = itemData.grid.RotateGrid(n);
+
                     //Take sample of the Inventory grid, with the same dimensions as the item shape
-                    InventoryItem[,] sampleGrid = TakeSample(x, y, RotateGrid(n, itemData.gridShape).GetLength(0), RotateGrid(n, itemData.gridShape).GetLength(1));
+                    Grid<InventoryItem> inventorySample = TakeInventorySample(x, y, rotatedItemGrid.GetLength(0), rotatedItemGrid.GetLength(1));
 
                     //Compare the sample grid with the item grid, to check for eligibility of placement 
-                    if (CompareGrids(sampleGrid, RotateGrid(n, itemData.gridShape)))
+                    if (inventorySample.CompareGrid(rotatedItemGrid))
                     {
-                        AddItemToGrid(item, RotateGrid(n, itemData.gridShape), x, y);
-                        AddItemToInventory(item);
+                        AddToInventoryGrid(item, rotatedItemGrid, x, y);
+                        AddToInventoryList(item);
                         return true;
                     }
                 }
@@ -72,10 +62,34 @@ public class Inventory : MonoBehaviour
         return false;
     }
 
-    public InventoryItem[,] TakeSample(int startX, int startY, int sampleWidth, int sampleHeight)
+
+    public void AddToInventoryGrid(InventoryItem item, Grid<bool?> itemGridShape, int startX, int startY)
+    {
+        //Place the item in the grid, setting the Inventory grid values to true where the item is placed
+
+        for (int y = 0; y < itemGridShape.GetLength(1); y++)
+        {
+            for (int x = 0; x < itemGridShape.GetLength(0); x++)
+            {
+                //Check if the item grid shape has a true value at this position
+                if (itemGridShape[x, y] != null)
+                {
+                    //Check if the position of the true value is within the bounds of the inventory grid
+                    if (startX + x < inventoryGrid.GetLength(0) && startY + y < inventoryGrid.GetLength(1))
+                    {
+                        //Set the inventory grid value to true at this position
+                        inventoryGrid[startX + x, startY + y] = item;
+                    }  
+                }
+            }
+        }
+    }
+
+
+    public Grid<InventoryItem> TakeInventorySample(int startX, int startY, int sampleWidth, int sampleHeight)
     {
         //create blank grid
-        InventoryItem[,] sampleGrid = new InventoryItem[sampleWidth, sampleHeight];
+        Grid<InventoryItem> sampleGrid = new Grid<InventoryItem>(sampleWidth, sampleHeight);
 
         //populate the sample grid with values from inventory grid
         for (int y = 0; y < sampleGrid.GetLength(1); y++)
@@ -90,7 +104,7 @@ public class Inventory : MonoBehaviour
                     int newWidth = Mathf.Min(3, inventoryGrid.GetLength(0) - startX);
                     int newHeight = Mathf.Min(3, inventoryGrid.GetLength(1) - startY);
 
-                    sampleGrid = new InventoryItem[newWidth, newHeight];
+                    sampleGrid = new Grid<InventoryItem>(newWidth, newHeight);
                 }
                 else
                 {
@@ -102,94 +116,31 @@ public class Inventory : MonoBehaviour
         return sampleGrid;
     }
 
-    public bool CompareGrids(InventoryItem[,] sampleGrid, bool[,] itemGrid)
-    {
-        //Check if the item grid is larger than the sample grid
-        if (itemGrid.GetLength(0) > sampleGrid.GetLength(0) || itemGrid.GetLength(1) > sampleGrid.GetLength(1))
-        {
-            //check if the item grid has a true value that is out of bounds of the sample grid, if it does, it can't be placed
-            for (int y = 0; y < itemGrid.GetLength(1); y++)
-            {
-                for (int x = 0; x < itemGrid.GetLength(0); x++)
-                {
-                    if (itemGrid[x, y])
-                    {
-                        if (x >= sampleGrid.GetLength(0) || y >= sampleGrid.GetLength(1))
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-        
-        //Compare the sample grid with the item grid, if any of the values are true in both grids, it can't be placed
-        for (int y = 0; y < sampleGrid.GetLength(1); y++)
-        {
-            for (int x = 0; x < sampleGrid.GetLength(0); x++)
-            {
-                //Check if both grids have a true value at this position
-                if (sampleGrid[x, y] && itemGrid[x, y])
-                {
-                    return false;
-                } 
-            }
-        }
-
-        return true;
-    }
-
-    public void AddItemToGrid(InventoryItem item, bool[,] itemGridShape, int startX, int startY)
-    {
-        //Place the item in the grid, setting the Inventory grid values to true where the item is placed
-
-        for (int y = 0; y < itemGridShape.GetLength(1); y++)
-        {
-            for (int x = 0; x < itemGridShape.GetLength(0); x++)
-            {
-                //Check if the item grid shape has a true value at this position
-                if (itemGridShape[x, y])
-                {
-                    //Check if the position of the true value is within the bounds of the inventory grid
-                    if (startX + x < inventoryGrid.GetLength(0) && startY + y < inventoryGrid.GetLength(1))
-                    {
-                        //Set the inventory grid value to true at this position
-                        inventoryGrid[startX + x, startY + y] = item;
-                    }  
-                }
-            }
-        }
-    }
-
-    public bool[,] RotateGrid(int numRotations, bool[,] originalGrid)
-    {
-        if (numRotations == 0) return originalGrid;
-
-       bool[,] rotatedGrid = new bool[0, 0];
-
-        for (int i = 0; i < numRotations; i++)
-        {
-            int width = originalGrid.GetLength(0);
-            int height = originalGrid.GetLength(1);
-            rotatedGrid = new bool[height, width];
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    rotatedGrid[y, width - 1 - x] = originalGrid[x, y];
-                }
-            }
-
-            originalGrid = rotatedGrid;
-        }
     
-       return rotatedGrid;
+
+    #region AutoStacking
+    public bool AttemptAutoStack(InventoryItem item)
+    {
+        if(CheckForItemAlreadyInInventory(item))
+        {
+            InventoryItem eligibleStack;
+            eligibleStack = FindEligibleStack(item);
+
+            if(eligibleStack)
+            {
+                IncrementStack(eligibleStack);
+                AddToInventoryList(item);
+                return true;
+            }
+        }
+
+        return false;
     }
 
-
-    public bool CheckForItemAlreadyInInventory(ItemData itemData)
+    public bool CheckForItemAlreadyInInventory(InventoryItem item)
     {
+        ItemData itemData = item.GetItemData();
+
         foreach (InventoryItem i in items)
         {
             if(i.GetItemData().itemName == itemData.itemName)
@@ -201,8 +152,10 @@ public class Inventory : MonoBehaviour
         return false;
     }
 
-    public InventoryItem FindEligibleStack(ItemData itemData)
+    public InventoryItem FindEligibleStack(InventoryItem item)
     {
+        ItemData itemData = item.GetItemData();
+
         for (int y = 0; y < inventoryGrid.GetLength(1); y++)
         {
             for (int x = 0; x < inventoryGrid.GetLength(0); x++)
@@ -228,7 +181,11 @@ public class Inventory : MonoBehaviour
         item.IncrementStackSize();
     }
 
-    public void debugPrintGrid(InventoryItem[,] grid)
+    #endregion
+
+    #region Debug
+
+    public void debugPrintGrid<T>(Grid<T> grid)
     {
         string gridString = "";
 
@@ -236,13 +193,27 @@ public class Inventory : MonoBehaviour
         {
             for (int x = 0; x < grid.GetLength(0); x++)
             {
-                gridString += grid[x, y] ? "[]" : "N";
+                bool occupied;
+
+                if (grid[x, y] is bool?)
+                {
+                    occupied = (bool?)(object)grid[x, y] == true;
+                }
+                else
+                {
+                    occupied = grid[x, y] != null;
+                }
+
+                gridString += occupied ? "[]" : "N";
             }
+
             gridString += "\n";
         }
 
-        Debug.Log(gridString);
+
+        print(gridString);
     }
+
 
     public void debugPrintItems()
     {
@@ -251,4 +222,6 @@ public class Inventory : MonoBehaviour
             print(i.GetItemData().itemName);
         }
     }
+
+    #endregion
 }
