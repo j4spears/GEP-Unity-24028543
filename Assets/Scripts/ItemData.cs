@@ -18,6 +18,5 @@ public class ItemData : ScriptableObject
         { true, false, false }
     };
 
-    public float rotation;
     public int maxStackSize;
 }

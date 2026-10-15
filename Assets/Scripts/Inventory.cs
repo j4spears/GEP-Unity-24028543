@@ -3,37 +3,49 @@ using System.Collections.Generic;
 
 public class Inventory : MonoBehaviour
 {
-    public List<ItemData> items = new List<ItemData>();
-    public bool[,] inventoryGrid = new bool[10, 10];
+    public List<InventoryItem> items = new List<InventoryItem>();
+    public InventoryItem[,] inventoryGrid = new InventoryItem[10, 10];
     public GameManager gameManager;
 
     void Start()
     {
         gameManager = FindAnyObjectByType<GameManager>();
-
-        //set all inventory grid values to false
-        for (int x = 0; x < inventoryGrid.GetLength(0); x++)
-        {
-            for (int y = 0; y < inventoryGrid.GetLength(1); y++)
-            {
-                inventoryGrid[x, y] = false;
-            }
-        }
     }
 
-    public void AddItemToInventory(ItemData item)
+    public void AddItemToInventory(InventoryItem item)
     {
         items.Add(item);
+        debugPrintGrid(inventoryGrid);
     }
 
-    public void RemoveItemFromInventory(ItemData item)
+    public void RemoveItemFromInventory(InventoryItem item)
     {
         items.Remove(item);
     }
 
 
-    public bool AttemptAutoAddItemToGrid(ItemData item)
+    public bool AttemptAutoAddItemToGrid(ItemData itemData)
     {
+        InventoryItem item = gameObject.AddComponent<InventoryItem>();
+        item.SetItemData(itemData);
+
+        if (itemData.maxStackSize > 0)
+        {
+            if(CheckForItemAlreadyInInventory(itemData))
+            {
+                InventoryItem eligibleStack;
+                eligibleStack = FindEligibleStack(itemData);
+
+                
+                if(eligibleStack)
+                {
+                    IncrementStack(eligibleStack);
+                    AddItemToInventory(item);
+                    return true;
+                }
+            }
+        }
+
         //loop through every cell in inventory grid
         for (int y = 0; y < inventoryGrid.GetLength(1); y++)
         {
@@ -43,26 +55,27 @@ public class Inventory : MonoBehaviour
                 for(int n = 0; n < 4; n++)
                 {
                     //Take sample of the Inventory grid, with the same dimensions as the item shape
-                    bool[,] sampleGrid = TakeSample(x, y, RotateGrid(n, item.gridShape).GetLength(0), RotateGrid(n, item.gridShape).GetLength(1));
+                    InventoryItem[,] sampleGrid = TakeSample(x, y, RotateGrid(n, itemData.gridShape).GetLength(0), RotateGrid(n, itemData.gridShape).GetLength(1));
 
                     //Compare the sample grid with the item grid, to check for eligibility of placement 
-                    if (CompareGrids(sampleGrid, RotateGrid(n, item.gridShape)))
+                    if (CompareGrids(sampleGrid, RotateGrid(n, itemData.gridShape)))
                     {
-                        AddItemToGrid(RotateGrid(n, item.gridShape), x, y);
+                        AddItemToGrid(item, RotateGrid(n, itemData.gridShape), x, y);
                         AddItemToInventory(item);
-                        print(n);
                         return true;
                     }
                 }
             }
         }
+
+        Destroy(item);
         return false;
     }
 
-    public bool[,] TakeSample(int startX, int startY, int sampleWidth, int sampleHeight)
+    public InventoryItem[,] TakeSample(int startX, int startY, int sampleWidth, int sampleHeight)
     {
         //create blank grid
-        bool[,] sampleGrid = new bool[sampleWidth, sampleHeight];
+        InventoryItem[,] sampleGrid = new InventoryItem[sampleWidth, sampleHeight];
 
         //populate the sample grid with values from inventory grid
         for (int y = 0; y < sampleGrid.GetLength(1); y++)
@@ -77,7 +90,7 @@ public class Inventory : MonoBehaviour
                     int newWidth = Mathf.Min(3, inventoryGrid.GetLength(0) - startX);
                     int newHeight = Mathf.Min(3, inventoryGrid.GetLength(1) - startY);
 
-                    sampleGrid = new bool[newWidth, newHeight];
+                    sampleGrid = new InventoryItem[newWidth, newHeight];
                 }
                 else
                 {
@@ -89,7 +102,7 @@ public class Inventory : MonoBehaviour
         return sampleGrid;
     }
 
-    public bool CompareGrids(bool[,] sampleGrid, bool[,] itemGrid)
+    public bool CompareGrids(InventoryItem[,] sampleGrid, bool[,] itemGrid)
     {
         //Check if the item grid is larger than the sample grid
         if (itemGrid.GetLength(0) > sampleGrid.GetLength(0) || itemGrid.GetLength(1) > sampleGrid.GetLength(1))
@@ -126,7 +139,7 @@ public class Inventory : MonoBehaviour
         return true;
     }
 
-    public void AddItemToGrid(bool[,] itemGridShape, int startX, int startY)
+    public void AddItemToGrid(InventoryItem item, bool[,] itemGridShape, int startX, int startY)
     {
         //Place the item in the grid, setting the Inventory grid values to true where the item is placed
 
@@ -141,13 +154,11 @@ public class Inventory : MonoBehaviour
                     if (startX + x < inventoryGrid.GetLength(0) && startY + y < inventoryGrid.GetLength(1))
                     {
                         //Set the inventory grid value to true at this position
-                        inventoryGrid[startX + x, startY + y] = true;
+                        inventoryGrid[startX + x, startY + y] = item;
                     }  
                 }
             }
         }
-
-        debugPrintGrid(inventoryGrid);
     }
 
     public bool[,] RotateGrid(int numRotations, bool[,] originalGrid)
@@ -177,7 +188,47 @@ public class Inventory : MonoBehaviour
     }
 
 
-    public void debugPrintGrid(bool[,] grid)
+    public bool CheckForItemAlreadyInInventory(ItemData itemData)
+    {
+        foreach (InventoryItem i in items)
+        {
+            if(i.GetItemData().itemName == itemData.itemName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public InventoryItem FindEligibleStack(ItemData itemData)
+    {
+        for (int y = 0; y < inventoryGrid.GetLength(1); y++)
+        {
+            for (int x = 0; x < inventoryGrid.GetLength(0); x++)
+            {   
+
+                InventoryItem currentCell = inventoryGrid[x,y];
+
+                if(currentCell)
+                {
+                    if(currentCell.GetItemData().itemName == itemData.itemName && currentCell.GetCurrentStackSize() < currentCell.GetItemData().maxStackSize)
+                    {
+                        return inventoryGrid[x,y];
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public void IncrementStack(InventoryItem item)
+    {
+        item.IncrementStackSize();
+    }
+
+    public void debugPrintGrid(InventoryItem[,] grid)
     {
         string gridString = "";
 
@@ -191,5 +242,13 @@ public class Inventory : MonoBehaviour
         }
 
         Debug.Log(gridString);
+    }
+
+    public void debugPrintItems()
+    {
+        foreach (InventoryItem i in items)
+        {
+            print(i.GetItemData().itemName);
+        }
     }
 }

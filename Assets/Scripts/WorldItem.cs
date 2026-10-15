@@ -4,7 +4,7 @@ public class WorldItem : MonoBehaviour
 {
     [SerializeField] private ItemData itemData;
 
-    void OnTriggerStay(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if(other.CompareTag("Player"))
         {
@@ -15,18 +15,13 @@ public class WorldItem : MonoBehaviour
         }
     }
 
-    void Pickup()
+    private void Pickup()
     {
         Inventory inventory = FindAnyObjectByType<Inventory>();
 
         if(inventory.AttemptAutoAddItemToGrid(itemData))
         {
             Destroy(gameObject);
-            //print("Picked up " + itemData.itemName);
-        }
-        else
-        {
-            //print("Inventory full, cannot pick up " + itemData.itemName);
         }
     }
 }
