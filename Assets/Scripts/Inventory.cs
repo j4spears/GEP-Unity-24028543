@@ -5,13 +5,7 @@ public class Inventory : MonoBehaviour
 {
     public List<InventoryItem> items = new List<InventoryItem>();
     public Grid<InventoryItem> inventoryGrid = new Grid<InventoryItem>(10, 10);
-    public GameManager gameManager;
-
-    void Start()
-    {
-        gameManager = FindAnyObjectByType<GameManager>();
-    }
-
+ 
     public void AddToInventoryList(InventoryItem item)
     {
         items.Add(item);
@@ -22,7 +16,6 @@ public class Inventory : MonoBehaviour
     {
         items.Remove(item);
     }
-
 
     public bool AttemptAutoAddItemToGrid(ItemData itemData)
     {
@@ -42,7 +35,7 @@ public class Inventory : MonoBehaviour
                 //loop through every rotation of the item
                 for(int n = 0; n < 4; n++)
                 {
-                    Grid<bool?> rotatedItemGrid = itemData.grid.RotateGrid(n);
+                    Grid<bool?> rotatedItemGrid = itemData.grid.GetGridRotated(n);
 
                     //Take sample of the Inventory grid, with the same dimensions as the item shape
                     Grid<InventoryItem> inventorySample = TakeInventorySample(x, y, rotatedItemGrid.GetLength(0), rotatedItemGrid.GetLength(1));
@@ -116,7 +109,6 @@ public class Inventory : MonoBehaviour
         return sampleGrid;
     }
 
-    
 
     #region AutoStacking
     public bool AttemptAutoStack(InventoryItem item)

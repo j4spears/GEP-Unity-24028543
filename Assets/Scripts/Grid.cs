@@ -55,7 +55,7 @@ public class Grid<Type> : IEnumerable<Type>
         return cells.GetLength(dimension);
     }
 
-    public Grid<Type> RotateGrid(int numRotations)
+    public Grid<Type> GetGridRotated(int numRotations)
     {
         Grid<Type> originalGrid = this;
 
